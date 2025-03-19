@@ -24,7 +24,7 @@ Processing_img = None
 
 # マウス操作の関数
 def mouseEvents(event, x, y, flags, param):
-    global Processing_img  # メモリ上に保存するためグローバル変数を使用
+    global Processing_img  
 
     if event == cv2.EVENT_LBUTTONDOWN:
         param['drawing'] = True
@@ -53,10 +53,11 @@ def mouseEvents(event, x, y, flags, param):
         # 画像の切り出し
         x1, y1, x2, y2 = min(param['start_x'], param['goal_x']), min(param['start_y'], param['goal_y']), max(param['start_x'], param['goal_x']), max(param['start_y'], param['goal_y'])
         
-        Processing_img = img[y1:y2, x1:x2]
+        Processing_img = img[y1:y2, x1:x2].copy()  # 切り取った画像をコピー
 
         if Processing_img.size == 0:
             print("選択範囲が無効です。")
+            Processing_img = None
             return
 
         print("画像をメモリ上に保存しました。")
@@ -101,25 +102,36 @@ cv2.createTrackbar('switch', 'change', 0, 1, nothing)
 while True:
     switch = cv2.getTrackbarPos('switch', 'change')
 
-    # RGB色空間の色を表示
+    # 元の画像をコピー
+    modified_img = Processing_img.copy()
+
+    # RGB色空間の色を変更
     if switch == 1:
         r = cv2.getTrackbarPos('Red', 'change')
         g = cv2.getTrackbarPos('Green', 'change')
         b = cv2.getTrackbarPos('Blue', 'change')
 
-        # RGBの値を画像に適用
-        modified_img = Processing_img.copy()
-        modified_img[:] = [r, g, b]
+        # RGBの値を適用
+        modified_img[:, :, 0] = b
+        modified_img[:, :, 1] = g
+        modified_img[:, :, 2] = r
     
-    # HSV色空間の色を表示
+    # HSV色空間の色を変更
     else:
         h = cv2.getTrackbarPos('Hue', 'change')
         s = cv2.getTrackbarPos('Saturation', 'change')
         v = cv2.getTrackbarPos('Value', 'change')
 
-        # HSVの値を画像に適用
-        hsv_img = np.full_like(Processing_img, (h, s, v), dtype=np.uint8)
-        modified_img = cv2.cvtColor(hsv_img, cv2.COLOR_HSV2BGR)
+        # 画像をHSVに変換
+        hsv_img = cv2.cvtColor(modified_img, cv2.COLOR_RGB2HSV)
+
+        # HSV値を変更
+        hsv_img[:, :, 0] = h
+        hsv_img[:, :, 1] = s
+        hsv_img[:, :, 2] = v
+
+        # HSVをBGRに戻す
+        modified_img = cv2.cvtColor(hsv_img, cv2.COLOR_HSV2RGB)
 
     # 表示
     cv2.imshow('change', modified_img)
